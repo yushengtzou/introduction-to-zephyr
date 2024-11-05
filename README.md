@@ -29,22 +29,21 @@ Windows users will likely need to install the [virtual COM port (VCP) drivers fr
 Open a terminal, navigate to this directory, and install the following dependencies:
 
 Linux/macOS:
+
 ```sh
 python -m venv venv
 source venv/bin/activate
-python -m pip install pyserial==3.5
+python -m pip install pyserial==3.5 esptool==4.8.1
 ```
 
-Windows:
+Windows (PowerShell):
+
 ```bat
+Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy Unrestricted -Force
 python -m venv venv
 venv\Scripts\activate
-python -m pip install pyserial==3.5
+python -m pip install pyserial==3.5 esptool==4.8.1
 ```
-
-Choose your desired target family below and follow the steps to build image and compile an example program.
-
-### Espressif (ESP32)
 
 From this directory, build the image (this will take some time):
 
@@ -83,11 +82,7 @@ west build -p always -b esp32s3_devkitc/esp32s3/procpu
 
 With some luck, the *blink* sample should build. The binary files will be in *workspace/apps/blink/build/zephyr*, which you can flash using [esptool](https://docs.espressif.com/projects/esptool/en/latest/esp32/).
 
-Connect a USB cable from your computer to the **UART port** on the development board. If you do not see the serial/COM port on your host OS, you might need to [install the necessary SiLabs VCP driver](https://www.silabs.com/developers/usb-to-uart-bridge-vcp-drivers?tab=downloads). In a new terminal on your **host computer**, activate the Python virtual environment (Linux/macOS: `source venv/bin/activate`, Windows: `venv\Scripts\activate`) if not done so already. Install the ESP flashing tool:
-
-```sh
-python -m pip install esptool==4.8.1
-```
+Connect a USB cable from your computer to the **UART port** on the development board. If you do not see the serial/COM port on your host OS, you might need to [install the necessary SiLabs VCP driver](https://www.silabs.com/developers/usb-to-uart-bridge-vcp-drivers?tab=downloads). In a new terminal on your **host computer**, activate the Python virtual environment (Linux/macOS: `source venv/bin/activate`, Windows: `venv\Scripts\activate`) if not done so already.
 
 Flash the binary to your board. For some ESP32 boards, you need to put it into bootloader by holding the *BOOTSEL* button and pressing the *RESET* button (or cycling power). Change `<PORT>` to the serial port for your ESP32 board (e.g. `/dev/ttyS0` for Linux, `/dev/tty.usbserial-1420` for macOS, `COM7` for Windows). You might also need to install a serial port driver, depending on the particular board.
 
