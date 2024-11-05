@@ -1,0 +1,23 @@
+{
+    "folders": [
+        {
+            "name": "/workspace",
+            "path": "/workspace"
+        },
+        {
+            "name": "/opt/toolchains/zephyr",
+            "path": "/opt/toolchains/zephyr"
+        }
+    ],
+    "settings": {
+        "terminal.integrated.shell.linux": "/bin/bash",
+        "workbench.colorTheme": "Visual Studio Dark - C++"
+    },
+    "extensions": {
+        "recommendations": [
+            "ms-vscode.cpptools",
+            "ms-vscode.cmake-tools"
+
+        ]
+    }
+}
