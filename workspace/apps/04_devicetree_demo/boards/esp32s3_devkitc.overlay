@@ -1,0 +1,4 @@
+&adc1 {
+    compatible = "espressif,esp32-adc";
+    status = "okay";
+};
