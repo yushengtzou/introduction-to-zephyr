@@ -1,4 +1,20 @@
-&adc1 {
-    compatible = "espressif,esp32-adc";
-    status = "okay";
+/ {
+    aliases {
+        my-led = &myled0;
+        my-button = &button0;
+    };
+
+    leds {
+        compatible = "gpio-leds";
+        myled0: d13 {
+            gpios = <&gpio0 5 GPIO_ACTIVE_HIGH>;
+        };
+    };
+
+    buttons {
+        compatible = "gpio-keys";
+        button0: button_0 {
+            gpios = <&gpio0 5 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;
+        };
+    };
 };

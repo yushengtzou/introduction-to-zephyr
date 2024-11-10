@@ -1,44 +1,66 @@
+// TODO:
+//  - Can you set GPIO_INPUT/OUTPUT in DTS? Seems to not be working
+//  - LED is not turning on
+//  - Clean up names in overlay
+//  - Demo struct fields in startup code?
+//  - Make button/LED the challenge (combine blinky and button)
+//  - Make simple button demo (without LED)
+
 #include <stdio.h>
 #include <zephyr/kernel.h>
-#include <zephyr/drivers/adc.h>
+#include <zephyr/drivers/gpio.h>
 
 // Settings
-static const uint8_t adc_channel = 4;
-static const uint8_t adc_resolution = 12;
-
-// ADC settings
-static const struct adc_channel_cfg adc_cfg = {
-    .gain = ADC_GAIN_1,
-    .reference = ADC_REF_INTERNAL,
-    .acquisition_time = ADC_ACQ_TIME_DEFAULT,
-    .channel_id = adc_channel,
-    .differential = 0,
-};
+static const int32_t sleep_time_ms = 100;
+static const struct gpio_dt_spec led = GPIO_DT_SPEC_GET(DT_ALIAS(my_led), gpios);
+static const struct gpio_dt_spec btn = GPIO_DT_SPEC_GET(DT_ALIAS(my_button), gpios);
 
 int main(void)
 {
 	int ret;
-	int state = 0;
+	int state;
 
-	// Make sure that the GPIO was initialized
+	// Make sure that the LED was initialized
 	if (!gpio_is_ready_dt(&led)) {
+		printk("ERROR: LED not ready\r\n");
 		return 0;
 	}
 
-	// Set the GPIO as output
+	// Make sure that the button was initialized
+	if (!gpio_is_ready_dt(&btn)) {
+		printk("ERROR: button not ready\r\n");
+		return 0;
+	}
+
+	// Set the LED as output (apply extra flags if needed)
 	ret = gpio_pin_configure_dt(&led, GPIO_OUTPUT);
 	if (ret < 0) {
 		return 0;
 	}
 
+	// Set the button as input (apply extra flags if needed)
+	ret = gpio_pin_configure_dt(&btn, GPIO_INPUT);
+	if (ret < 0) {
+		return 0;
+	}
+	
 	// Do forever
 	while (1) {
 
-		// Change the state of the pin and print
-		state = !state;
-		printk("LED state: %d\r\n", state);
+		// Poll button state
+		state = gpio_pin_get_dt(&btn);
+        if (state < 0) {
+            printk("Error %d: failed to read button pin\r\n", state);
+        } else {
+            printk("Button state: %d\n", state);
+        }
+
+		// TEST
+		printk("high: %d\r\n", GPIO_ACTIVE_HIGH);
+		printk("pullup: %d\r\n", GPIO_PULL_UP);
+		printk("btn_spec %d\r\n", btn.dt_flags);
 		
-		// Set pin state
+		// Set LED state
 		ret = gpio_pin_set_dt(&led, state);
 		if (ret < 0) {
 			return 0;
