@@ -2,6 +2,7 @@
 
 # Settings
 ARG DEBIAN_VERSION=stable-20241016-slim
+ARG PASSWORD="zephyr"
 # Zephyr 3.7.0 is not working with ESP32S3, see: https://github.com/zephyrproject-rtos/zephyr/issues/71397
 #ARG ZEPHYR_RTOS_VERSION=3.7.0
 ARG ZEPHYR_RTOS_COMMIT=26603cefaf41298c417f2eee834ed40d9ab35d3a
@@ -22,6 +23,7 @@ ARG VIRTUAL_ENV=/opt/venv
 FROM debian:${DEBIAN_VERSION}
 
 # Redeclare arguments after FROM
+ARG PASSWORD
 ARG ZEPHYR_RTOS_VERSION
 ARG ZEPHYR_RTOS_COMMIT
 ARG ZEPHYR_SDK_VERSION
@@ -69,7 +71,11 @@ RUN apt-get -y update && \
         dos2unix \
         vim \
         nano \
-        mc
+        mc \
+        openssh-server
+
+# Set root password
+RUN echo "root:${PASSWORD}" | chpasswd
 
 # Set up a Python virtual environment
 ENV VIRTUAL_ENV=${VIRTUAL_ENV}
@@ -87,6 +93,17 @@ RUN apt-get clean -y && \
 # Set up directories
 RUN mkdir -p /workspace/ && \
     mkdir -p /opt/toolchains
+
+# Set up sshd working directory
+RUN mkdir -p /var/run/sshd && \
+    chmod 0755 /var/run/sshd
+
+# Allow root login via SSH
+RUN sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config && \
+    sed -i 's/#PasswordAuthentication yes/PasswordAuthentication yes/' /etc/ssh/sshd_config
+
+# Expose SSH port
+EXPOSE 22
 
 #-------------------------------------------------------------------------------
 # Zephyr RTOS
@@ -149,9 +166,6 @@ RUN cd /tmp && \
     chmod +x install.sh && \
     bash install.sh --version ${VS_CODE_SERVER_VERSION}
 
-# Install CMake extensions
-RUN code-server --install-extension ms-vscode.cmake-tools
-
 # Download CMake, C/C++, Devicetree extensions (code-server extension manager does not work well)
 RUN cd /tmp && \
     if [ "$TARGETARCH" = "amd64" ]; then \
@@ -199,5 +213,7 @@ ENV MC_SKIN=dark
 RUN echo "source ${VIRTUAL_ENV}/bin/activate" >> /root/.bashrc && \
     echo "source /opt/toolchains/zephyr/zephyr-env.sh" >> /root/.bashrc
 
-# Entrypoint: Start VS Code Server with the Zephyr workspace
-CMD code-server --auth none --bind-addr 0.0.0.0:${VS_CODE_SERVER_PORT} /zephyr.code-workspace
+# Custom entrypoint
+COPY scripts/entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+ENTRYPOINT ["/entrypoint.sh"]
