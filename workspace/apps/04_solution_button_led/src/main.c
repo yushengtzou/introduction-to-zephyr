@@ -1,11 +1,3 @@
-// TODO:
-//  - Can you set GPIO_INPUT/OUTPUT in DTS? Seems to not be working
-//  - LED is not turning on
-//  - Clean up names in overlay
-//  - Demo struct fields in startup code?
-//  - Make button/LED the challenge (combine blinky and button)
-//  - Make simple button demo (without LED)
-
 #include <stdio.h>
 #include <zephyr/kernel.h>
 #include <zephyr/drivers/gpio.h>
@@ -43,6 +35,10 @@ int main(void)
 	if (ret < 0) {
 		return 0;
 	}
+
+	// Print out flags
+	printk("LED spec flags: 0x%x\r\n", led.dt_flags);
+	printk("Button spec flags: 0x%x\r\n", btn.dt_flags);
 	
 	// Do forever
 	while (1) {
@@ -52,13 +48,8 @@ int main(void)
         if (state < 0) {
             printk("Error %d: failed to read button pin\r\n", state);
         } else {
-            printk("Button state: %d\n", state);
+            printk("Button state: %d\r\n", state);
         }
-
-		// TEST
-		printk("high: %d\r\n", GPIO_ACTIVE_HIGH);
-		printk("pullup: %d\r\n", GPIO_PULL_UP);
-		printk("btn_spec %d\r\n", btn.dt_flags);
 		
 		// Set LED state
 		ret = gpio_pin_set_dt(&led, state);

@@ -5,7 +5,7 @@ cmake_minimum_required(VERSION 3.22.0)
 find_package(Zephyr REQUIRED HINTS $ENV{ZEPHYR_BASE})
 
 # Name the project
-project(blink)
+project(hello_blink)
 
 # Include the library (via directory)
 add_subdirectory(lib/say_hello)

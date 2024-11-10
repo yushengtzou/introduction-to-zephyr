@@ -1,20 +1,24 @@
 / {
     aliases {
-        my-led = &myled0;
-        my-button = &button0;
+        my-led = &led_0;
+        my-button = &button_0;
     };
 
     leds {
         compatible = "gpio-leds";
-        myled0: d13 {
-            gpios = <&gpio0 5 GPIO_ACTIVE_HIGH>;
+        led_0: d13 {
+            gpios = <&gpio0 13 GPIO_ACTIVE_HIGH>;
         };
     };
 
     buttons {
         compatible = "gpio-keys";
-        button0: button_0 {
+        debounce-interval-ms = <50>;
+        polling-mode;
+
+        button_0: d5 {
             gpios = <&gpio0 5 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;
+
         };
     };
 };
