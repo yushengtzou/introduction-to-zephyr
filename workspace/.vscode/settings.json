@@ -1,4 +1,3 @@
 {
-    "cmake.sourceDirectory": "/workspace/apps/blink",
-    "cmake.ignoreCMakeListsMissing": true
+    "cmake.ignoreCMakeListsMissing": true,
 }
