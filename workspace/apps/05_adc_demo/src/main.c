@@ -2,10 +2,8 @@
 #include <zephyr/kernel.h>
 #include <zephyr/drivers/adc.h>
 
-//%%% TODO: use resolution and vref to calculate actual mV (no need for print float)
-
 // Settings
-static const int32_t sleep_time_ms = 1000;
+static const int32_t sleep_time_ms = 100;
 
 // Get Devicetree configurations
 #define MY_ADC_CH DT_ALIAS(my_adc_channel)
@@ -16,6 +14,11 @@ int main(void)
 {
 	int ret;
 	uint16_t buf;
+	uint16_t val_mv;
+	int32_t vref_mv;
+
+	// Get Vref (mV) from Devicetree property
+	vref_mv = DT_PROP(MY_ADC_CH, zephyr_vref_mv);
 
 	// Buffer and options for ADC (defined in adc.h)
 	struct adc_sequence seq = {
@@ -37,6 +40,7 @@ int main(void)
 		printk("Could not set up ADC\r\n");
 		return 0;
 	}
+
 	// Do forever
 	while (1) {
 
@@ -47,8 +51,11 @@ int main(void)
 			continue;
 		}
 
+		// Calculate ADC value (mV)
+		val_mv = buf * vref_mv / (1 << seq.resolution);
+
 		// Print ADC value
-		printk("%u\r\n", buf);
+		printk("Raw: %u, mV: %u\r\n", buf, val_mv);
 
 		// Sleep
 		k_msleep(sleep_time_ms);
