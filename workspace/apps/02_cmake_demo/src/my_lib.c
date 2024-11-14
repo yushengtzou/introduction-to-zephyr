@@ -2,7 +2,6 @@
 
 #include "my_lib.h"
 
-void say_hello()
-{
-    printf("Hello, world!\r\n");
+void say_hello() {
+    print("Hello, world!\r\n");
 }

@@ -1,7 +1,8 @@
 /{
-    zephyr,user {
-        io-channels = <&adc0 3>;
-    };
+	aliases {
+		my-adc = &adc0;
+		my-adc-channel = &adc0_ch3;
+	};
 };
 
 // ADC0 Ch 3 is connected to GPIO4
@@ -10,7 +11,7 @@
     #address-cells = <1>;
 	#size-cells = <0>;
     
-	channel@3 {
+	adc0_ch3: channel@3 {
 		reg = <3>;
 		zephyr,gain = "ADC_GAIN_1";
 		zephyr,reference = "ADC_REF_INTERNAL";

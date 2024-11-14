@@ -1,4 +1,4 @@
-#ifndef MY_LIB_H_
+#ifndef MY_LIB_H
 #define MY_LIB_H
 
 void say_hello();
