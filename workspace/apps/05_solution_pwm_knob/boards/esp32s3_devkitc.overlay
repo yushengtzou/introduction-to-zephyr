@@ -4,7 +4,7 @@
 / {
 	aliases {
 		my-adc = &adc0;
-		my-adc-channel = &adc0_ch5;
+		my-adc-channel = &adc0_ch0;
 		led-0 = &led_0;
 	};
 
@@ -18,14 +18,14 @@
 	};
 };
 
-// ADC1 (adc0) channel 5 is connected to GPIO6
+// ADC1 (adc0) channel 0 is connected to GPIO1
 &adc0 {
 	status = "okay";
     #address-cells = <1>;
 	#size-cells = <0>;
     
-	adc0_ch5: channel@5 {
-		reg = <5>;
+	adc0_ch0: channel@0 {
+		reg = <0>;
 		zephyr,gain = "ADC_GAIN_1_4";
 		zephyr,reference = "ADC_REF_INTERNAL";
 		zephyr,vref-mv = <3900>;
