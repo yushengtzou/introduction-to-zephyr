@@ -11,6 +11,7 @@ struct button_api {
 // Configuration
 struct button_config {
     struct gpio_dt_spec btn;
+    uint32_t id;
 };
 
 #endif /* ZEPHYR_DRIVERS_BUTTON_H_ */

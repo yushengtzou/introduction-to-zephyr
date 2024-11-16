@@ -7,6 +7,6 @@ compatible: "custom,button"
 
 # Define the required node properties
 properties:
-  gpio:
+  pin:
     type: phandle
     required: true

@@ -26,8 +26,11 @@ static int button_init(const struct device *dev)
     // Cast device.config (declared const void *) to our button's config
     const struct button_config *cfg = (const struct button_config *)dev->config;
 
-    // Get the button struct from the config
+    // Get the button struct and instance ID from the config
     const struct gpio_dt_spec *btn = &cfg->btn;
+
+    // Print to console
+    LOG_DBG("Initializing button (instance ID: %u)\r\n", cfg->id);
 
     // Check that the button device is ready
     if (!gpio_is_ready_dt(btn)) {
@@ -84,7 +87,9 @@ static const struct button_api button_api_funcs = {
                                                                             \
     /* Create an instance of the config struct, populate with DT values */  \
     static const struct button_config button_config_##inst = {              \
-        .btn = GPIO_DT_SPEC_GET(DT_INST(inst, custom_button), gpio)              \
+        .btn = GPIO_DT_SPEC_GET(                                            \
+            DT_PHANDLE(DT_INST(inst, custom_button), pin), gpios),          \
+        .id = inst                                                          \
     };                                                                      \
                                                                             \
 	/* Create a "device" instance from a Devicetree node identifier and */	\
