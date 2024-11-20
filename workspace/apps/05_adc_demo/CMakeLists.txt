@@ -1,11 +1,6 @@
-# Minimum CMake version
-cmake_minimum_required(VERSION 3.22.0)
+cmake_minimum_required(VERSION 3.20.0)
 
-# Locate the Zephyr RTOS source
 find_package(Zephyr REQUIRED HINTS $ENV{ZEPHYR_BASE})
-
-# Name the project
 project(adc_demo)
 
-# Locate the source code for the application
 target_sources(app PRIVATE src/main.c)
