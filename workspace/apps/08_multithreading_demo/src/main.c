@@ -2,12 +2,12 @@
 #include <zephyr/kernel.h>
 #include <zephyr/drivers/gpio.h>
 
-// Stack size settings
-#define BLINK_THREAD_STACK_SIZE 256
-
 // Sleep settings
 static const int32_t blink_sleep_ms = 500;
 static const int32_t print_sleep_ms = 700;
+
+// Stack size settings
+#define BLINK_THREAD_STACK_SIZE 256
 
 // Define stack areas for the threads
 K_THREAD_STACK_DEFINE(blink_stack, BLINK_THREAD_STACK_SIZE);
@@ -32,7 +32,7 @@ void blink_thread_start(void *arg_1, void *arg_2, void *arg_3)
 		// Set pin state
 		ret = gpio_pin_set_dt(&led, state);
 		if (ret < 0) {
-			return 0;
+			printk("Error: could not toggle pin\r\n");
 		}
 
 		k_msleep(blink_sleep_ms);

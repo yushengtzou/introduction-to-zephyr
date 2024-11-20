@@ -2,10 +2,14 @@
 #include <zephyr/kernel.h>
 #include <zephyr/drivers/sensor.h>
 
+// Sleep settings
+static const int32_t sensor_sleep_ms = 500;
+static const int32_t output_sleep_ms = 5000;
+
 // Stack size settings
 #define SENSOR_THREAD_STACK_SIZE 512
-#define OUTPUT_THREAD_STACK_SIZE 512
-#define QUEUE_MAX 10
+#define OUTPUT_THREAD_STACK_SIZE 1024
+#define QUEUE_SIZE 20
 
 // Define stack areas for the threads
 K_THREAD_STACK_DEFINE(sensor_stack, SENSOR_THREAD_STACK_SIZE);
@@ -15,84 +19,84 @@ K_THREAD_STACK_DEFINE(output_stack, OUTPUT_THREAD_STACK_SIZE);
 static struct k_thread sensor_thread;
 static struct k_thread output_thread;
 
-// Define shared temperature value
-static struct sensor_value temperature;
-
-// Define semaphore (initial count 0 and maximum 1)
-K_SEM_DEFINE(my_semaphore, 0, 1);
-
-// Define mutex
-K_MUTEX_DEFINE(my_mutex);
+// Define queue
+K_MSGQ_DEFINE(my_queue, sizeof(struct sensor_value), QUEUE_SIZE, 4);
 
 // Sensor thread entry point
 void sensor_thread_start(void *sensor, void *arg2, void *arg3)
 {
 	int ret;
+	struct sensor_value temperature;
 
 	// Cast sensor handle back to device struct pointer
 	const struct device *mcp = (const struct device *)sensor;
+
+	// Check if the MCP9808 has been initialized (init function called)
+	if (!device_is_ready(mcp)) {
+		printk("Device %s is not ready.\n", mcp->name);
+		return;
+	}
 
 	printk("Starting sensor thread\r\n");
 
 	while (1) {
 
 		// Sleep early to prevent fast loop on failure
-		k_msleep(1000);
+		k_msleep(sensor_sleep_ms);
 
-		// Fetch the temperature value from the sensor into the device's data structure
+		// Fetch the value from the sensor into the device's data struct
         ret = sensor_sample_fetch(mcp);
         if (ret < 0) {
             printk("Sample fetch error: %d\n", ret);
             continue;
         }
 
-        // Copy the temperature value from the device's data structure into the tmp struct
-		// Use the mutex to prevent other threads from accessing the variable during the update
-		k_mutex_lock(&my_mutex, K_FOREVER);
+        // Copy the value from the device's data struct into the local variable
         ret = sensor_channel_get(mcp, SENSOR_CHAN_AMBIENT_TEMP, &temperature);
-		k_mutex_unlock(&my_mutex);
         if (ret < 0) {
             printk("Channel get error: %d\n", ret);
             continue;
         }
 
-        // Update the semaphore to notify the other thread that data is ready
-		k_sem_give(&my_semaphore);
-
+		// Put message on queue
+		printk("Putting message on queue\r\n");
+		ret = k_msgq_put(&my_queue, &temperature, K_NO_WAIT);
+		if (ret < 0) {
+			printk("Queue full\r\n");
+		}
 	}
 }
 
 // Output thread entry point
 void output_thread_start(void *arg1, void *arg2, void *arg3)
 {
+	struct sensor_value temperature;
+
 	printk("Starting output thread\r\n");
 
 	while (1) {
 
-		// Wait for semaphore (no need to sleep thread!)
-		k_sem_take(&my_semaphore, K_FOREVER);
+		// Let the queue fill up
+		k_msleep(output_sleep_ms);
 
-		// Use (print) the data, protected by a mutex
-		k_mutex_lock(&my_mutex, K_FOREVER);
-		printk("Temperature: %d.%06d\n", temperature.val1, temperature.val2);
-		k_mutex_unlock(&my_mutex);
+		// Print all messages in queue
+		while (k_msgq_num_used_get(&my_queue) > 0) {
+			if (k_msgq_get(&my_queue, &temperature, K_FOREVER) == 0) {
+				printk("Temperature: %d.%06d\n", 
+					   temperature.val1, 
+					   temperature.val2);
+			}
+		}
 	}
 }
 
 int main(void) 
 {
-	int ret;
 	k_tid_t sensor_tid;
 	k_tid_t output_tid;
 
 	// Get Devicetree configuration for sensor
 	const struct device *const mcp = DEVICE_DT_GET(DT_ALIAS(my_mcp9808));
-
-	// Check if the MCP9808 has been initialized (init function called)
-	if (!device_is_ready(mcp)) {
-		printk("Device %s is not ready.\n", mcp->name);
-		return 0;
-	}
 
 	// Start the sensor thread
 	sensor_tid = k_thread_create(&sensor_thread,		// Thread struct
@@ -102,7 +106,7 @@ int main(void)
 								(void *)mcp,			// Pass in sensor handle
 								NULL,					// arg_2
 								NULL,					// arg_3
-								7,						// Priority
+								8,						// Priority
 								0,						// Options
 								K_NO_WAIT);				// Delay
 
@@ -114,7 +118,7 @@ int main(void)
 								NULL,					// arg_1
 								NULL,					// arg_2
 								NULL,					// arg_3
-								8,						// Priority
+								7,						// Priority
 								0,						// Options
 								K_NO_WAIT);				// Delay
 

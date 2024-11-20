@@ -3,14 +3,13 @@
 #include <zephyr/drivers/gpio.h>
 #include <zephyr/console/console.h>
 
-// Stack size settings
-#define BLINK_THREAD_STACK_SIZE 512
-#define INPUT_THREAD_STACK_SIZE 512
-#define QUEUE_MAX 10
-
 // Blink settings
 static const int32_t blink_max_ms = 2000;
 static const int32_t blink_min_ms = 0;
+
+// Stack size settings
+#define BLINK_THREAD_STACK_SIZE 512
+#define INPUT_THREAD_STACK_SIZE 512
 
 // Define stack areas for the threads
 K_THREAD_STACK_DEFINE(blink_stack, BLINK_THREAD_STACK_SIZE);
@@ -20,8 +19,11 @@ K_THREAD_STACK_DEFINE(input_stack, INPUT_THREAD_STACK_SIZE);
 static struct k_thread blink_thread;
 static struct k_thread input_thread;
 
-// Define queue
-K_MSGQ_DEFINE(my_queue, sizeof(int8_t), QUEUE_MAX, 1);
+// Define mutex
+K_MUTEX_DEFINE(my_mutex);
+
+// Define shared blink sleep value
+static int32_t blink_sleep_ms = 500;
 
 // Get LED struct from Devicetree
 const struct gpio_dt_spec led = GPIO_DT_SPEC_GET(DT_ALIAS(my_led), gpios);
@@ -29,8 +31,7 @@ const struct gpio_dt_spec led = GPIO_DT_SPEC_GET(DT_ALIAS(my_led), gpios);
 // Console input thread entry point
 void input_thread_start(void *arg1, void *arg2, void *arg3)
 {
-	int ret;
-	int8_t val;
+	int8_t inc;
 
 	printk("Starting input thread\r\n");
 
@@ -41,19 +42,26 @@ void input_thread_start(void *arg1, void *arg2, void *arg3)
 
 		// See if first character is + or -
 		if (line[0] == '+') {
-			val = 1;
+			inc = 1;
 		} else if (line[0] == '-') {
-			val = -1;
+			inc = -1;
 		} else {
 			continue;
 		}
 
-		// Put message on queue
-		printk("Putting val %d\r\n", val);
-		ret = k_msgq_put(&my_queue, &val, K_NO_WAIT);
-		if (ret < 0) {
-			printk("Queue full\r\n");
+		// Increase or decrease wait time and bound the value
+		// Use the mutex to prevent other threads from accessing the variable during the update
+		k_mutex_lock(&my_mutex, K_FOREVER);
+		blink_sleep_ms += (int32_t)inc * 100;
+		if (blink_sleep_ms > blink_max_ms) {
+			blink_sleep_ms = blink_max_ms;
+		} else if (blink_sleep_ms < blink_min_ms) {
+			blink_sleep_ms = blink_min_ms;
 		}
+		k_mutex_unlock(&my_mutex);
+
+		// Print the new sleep time
+		printk("Updating blink sleep to: %d\r\n", blink_sleep_ms);
 	}
 }
 
@@ -62,27 +70,16 @@ void blink_thread_start(void *arg1, void *arg2, void *arg3)
 {
 	int ret;
 	int state = 0;
-	int32_t blink_sleep_ms = 500;
-	int8_t val = 0;
+	int32_t sleep_ms;
 
 	printk("Starting blink thread\r\n");
 
 	while (1) {
 
-		// Get message from queue
-		ret = k_msgq_get(&my_queue, &val, K_NO_WAIT);
-
-		// Increase or decrease wait time as requested and bound sleep time
-		if (ret == 0) {
-			printk("Received val: %d\r\n", val);
-			blink_sleep_ms += (int32_t)val * 100;
-			if (blink_sleep_ms > blink_max_ms) {
-				blink_sleep_ms = blink_max_ms;
-			} else if (blink_sleep_ms < blink_min_ms) {
-				blink_sleep_ms = blink_min_ms;
-			}
-			printk("Updating blink sleep to: %d\r\n", blink_sleep_ms);
-		}
+		// Update the sleep time. Protected with a mutex.
+		k_mutex_lock(&my_mutex, K_FOREVER);
+		sleep_ms = blink_sleep_ms;
+		k_mutex_unlock(&my_mutex);
 
 		// Change the state of the pin and print
 		state = !state;
@@ -94,7 +91,7 @@ void blink_thread_start(void *arg1, void *arg2, void *arg3)
 		}
 
 		// Sleep for specified time
-		k_msleep(blink_sleep_ms);
+		k_msleep(sleep_ms);
 	}
 }
 
