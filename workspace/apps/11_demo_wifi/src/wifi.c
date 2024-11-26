@@ -7,82 +7,41 @@ static struct net_mgmt_event_callback wifi_cb;
 static struct net_mgmt_event_callback ipv4_cb;
 
 // Semaphores
-static K_SEM_DEFINE(sem_wifi_connected, 0, 1);
-static K_SEM_DEFINE(sem_ipv4_obtained, 0, 1);
+static K_SEM_DEFINE(sem_wifi, 0, 1);
+static K_SEM_DEFINE(sem_ipv4, 0, 1);
 
 // Called when the WiFi is connected
-static void handle_wifi_connected(struct net_mgmt_event_callback *cb)
-{
-    const struct wifi_status *status = (const struct wifi_status *)cb->info;
-
-    if (status->status) {
-        printk("Error (%d): Connection request failed\r\n", status->status);
-    } else {
-        printk("Connected\r\n");
-        k_sem_give(&sem_wifi_connected);
-    }
-}
-
-// Called when the WiFi is disconnected
-static void handle_wifi_disconnected(struct net_mgmt_event_callback *cb)
-{
-    const struct wifi_status *status = (const struct wifi_status *)cb->info;
-
-    if (status->status) {
-        printk("Error (%d): Disconnection request failed\r\n", status->status);
-    } else {
-        printk("Disconnected\r\n");
-        k_sem_take(&sem_wifi_connected, K_NO_WAIT);
-    }
-}
-
-// Called when the IPv4 address is obtained from the DHCP server
-static void handle_ipv4_obtained(struct net_if *iface)
-{
-    int i = 0;
-
-    for (i = 0; i < NET_IF_MAX_IPV4_ADDR; i++) {
-
-        char buf[NET_IPV4_ADDR_LEN];
-
-        // Print the IPv4 address information
-        printk("IPv4 address obtained:\r\n");
-        printk("  IP address: %s\r\n",
-                net_addr_ntop(AF_INET,
-                              &iface->config.ip.ipv4->unicast[i].ipv4,
-                              buf, sizeof(buf)));
-        printk("  Subnet: %s\r\n",
-                net_addr_ntop(AF_INET,
-                              &iface->config.ip.ipv4->unicast[i].netmask,
-                              buf, sizeof(buf)));
-        printk("  Router: %s\r\n",
-                net_addr_ntop(AF_INET,
-                              &iface->config.ip.ipv4->gw,
-                              buf, sizeof(buf)));
-    }
-
-    // Signal that the IP address has been obtained
-    k_sem_give(&sem_ipv4_obtained);
-}
-
-// Event handler for WiFi management events
-static void wifi_mgmt_event_handler(struct net_mgmt_event_callback *cb, 
+static void on_wifi_connection_event(struct net_mgmt_event_callback *cb, 
                                     uint32_t mgmt_event, 
                                     struct net_if *iface)
 {
-    switch (mgmt_event)
-    {
-        case NET_EVENT_WIFI_CONNECT_RESULT:
-            handle_wifi_connected(cb);
-            break;
-        case NET_EVENT_WIFI_DISCONNECT_RESULT:
-            handle_wifi_disconnected(cb);
-            break;
-        case NET_EVENT_IPV4_ADDR_ADD:
-            handle_ipv4_obtained(iface);
-            break;
-        default:
-            break;
+    const struct wifi_status *status = (const struct wifi_status *)cb->info;
+
+    if (mgmt_event == NET_EVENT_WIFI_CONNECT_RESULT) {
+        if (status->status) {
+            printk("Error (%d): Connection request failed\r\n", status->status);
+        } else {
+            printk("Connected!\r\n");
+            k_sem_give(&sem_wifi);
+        }
+    } else if (mgmt_event == NET_EVENT_WIFI_DISCONNECT_RESULT) {
+        if (status->status) {
+            printk("Error (%d): Disconnection request failed\r\n", status->status);
+        } else {
+            printk("Disconnected\r\n");
+            k_sem_take(&sem_wifi, K_NO_WAIT);
+        }
+    }
+}
+
+// Event handler for WiFi management events
+static void on_ipv4_obtained(struct net_mgmt_event_callback *cb, 
+                             uint32_t mgmt_event, 
+                             struct net_if *iface)
+{
+    // Signal that the IP address has been obtained
+    if (mgmt_event == NET_EVENT_IPV4_ADDR_ADD) {
+        k_sem_give(&sem_ipv4);
     }
 }
 
@@ -91,10 +50,10 @@ void wifi_init(void)
 {
     // Initialize the event callbacks
     net_mgmt_init_event_callback(&wifi_cb, 
-                                 wifi_mgmt_event_handler,
+                                 on_wifi_connection_event,
                                  NET_EVENT_WIFI_CONNECT_RESULT | NET_EVENT_WIFI_DISCONNECT_RESULT);
     net_mgmt_init_event_callback(&ipv4_cb, 
-                                 wifi_mgmt_event_handler,
+                                 on_ipv4_obtained,
                                  NET_EVENT_IPV4_ADDR_ADD);
 
     // Add the event callbacks
@@ -129,7 +88,7 @@ int wifi_connect(char *ssid, char *psk)
                    sizeof(params));
     
     // Wait for the connection to complete
-    k_sem_take(&sem_wifi_connected, K_FOREVER);
+    k_sem_take(&sem_wifi, K_FOREVER);
 
     return ret;
 }
@@ -139,12 +98,14 @@ void wifi_wait_for_ip_addr(void)
 {
     struct wifi_iface_status status;
     struct net_if *iface;
+    char ip_addr[NET_IPV4_ADDR_LEN];
+    char gw_addr[NET_IPV4_ADDR_LEN];
 
     // Get interface
     iface = net_if_get_default();
 
     // Wait for the IPv4 address to be obtained
-    k_sem_take(&sem_ipv4_obtained, K_FOREVER);
+    k_sem_take(&sem_ipv4, K_FOREVER);
 
     // Get the WiFi status
     if (net_mgmt(NET_REQUEST_WIFI_IFACE_STATUS, 
@@ -153,6 +114,26 @@ void wifi_wait_for_ip_addr(void)
                  sizeof(struct wifi_iface_status)))
     {
         printk("Error: WiFi status request failed\r\n");
+    }
+
+    // Get the IP address
+    memset(ip_addr, 0, sizeof(ip_addr));
+    if (net_addr_ntop(AF_INET, 
+                      &iface->config.ip.ipv4->unicast[0].ipv4,
+                      ip_addr, 
+                      sizeof(ip_addr)) == NULL)
+    {
+        printk("Error: Could not convert IP address to string\r\n");
+    }
+
+    // Get the gateway address
+    memset(gw_addr, 0, sizeof(gw_addr));
+    if (net_addr_ntop(AF_INET, 
+                      &iface->config.ip.ipv4->gw,
+                      gw_addr, 
+                      sizeof(gw_addr)) == NULL)
+    {
+        printk("Error: Could not convert gateway address to string\r\n");
     }
 
     // Print the WiFi status
@@ -164,6 +145,8 @@ void wifi_wait_for_ip_addr(void)
         printk("  Channel: %d\r\n", status.channel);
         printk("  Security: %s\r\n", wifi_security_txt(status.security));
         printk("  RSSI: %d\r\n", status.rssi);
+        printk("  IP address: %s\r\n", ip_addr);
+        printk("  Gateway: %s\r\n", gw_addr);
     }
 }
 
