@@ -10,7 +10,7 @@
             "cwd":  "${workspaceFolder}",
             "MIMode": "gdb",
             "miDebuggerPath": "/opt/toolchains/zephyr-sdk-0.16.8/xtensa-espressif_esp32s3_zephyr-elf/bin/xtensa-espressif_esp32s3_zephyr-elf-gdb",
-            "miDebuggerServerAddress": " host.docker.internal:3333",
+            "miDebuggerServerAddress": "host.docker.internal:3333",
             "setupCommands": [
                 {
                     "description": "Pretty print for gdb",
