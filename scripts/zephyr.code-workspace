@@ -7,11 +7,19 @@
         {
             "name": "/opt/toolchains/zephyr",
             "path": "/opt/toolchains/zephyr"
+        },
+        {
+            "name": "/opt/toolchains/modules",
+            "path": "/opt/toolchains/modules"
         }
     ],
     "settings": {
         "terminal.integrated.shell.linux": "/bin/bash",
-        "workbench.colorTheme": "Visual Studio Dark - C++"
+        "workbench.colorTheme": "Visual Studio Dark - C++",
+        "files.associations": {
+            "lvgl_input_device.h": "c",
+            "lvgl.h": "c"
+        }
     },
     "extensions": {
         "recommendations": [
