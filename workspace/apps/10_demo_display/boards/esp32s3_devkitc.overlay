@@ -37,9 +37,8 @@
 			vmctr1 = <14>;
 			gamctrp1 = [02 1C 07 12 37 32 29 2D 29 25 2B 39 00 01 03 10];
 			gamctrn1 = [03 1D 07 06 2E 2C 29 2D 2E 2E 37 3F 00 00 02 10];
-			colmod = <5>;
-			/* Set D3 (RGB) bit to 1. LV_COLOR_16_SWAP is enabled by default */
-			madctl = <184>; /* Set to <184> to rotate the image 180 degrees. */
+			colmod = <5>;	// 16-bit color mode
+			madctl = <184>; // Set to <120> to rotate the image 180 degrees
 			caset = [00 01 00 a0];
 			raset = [00 1a 00 69];
 		};
