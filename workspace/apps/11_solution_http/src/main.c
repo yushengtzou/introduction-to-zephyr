@@ -2,6 +2,7 @@
 #include <string.h>
 #include <zephyr/kernel.h>
 #include <zephyr/net/socket.h>
+#include <zephyr/net/http/client.h>
 
 // Custom libraries
 #include "wifi.h"
@@ -13,9 +14,34 @@
 // HTTP GET settings
 #define HTTP_HOST "example.com"
 #define HTTP_URL "/"
+#define HTTP_TIMEOUT_MS 3000
+
+// HTTP buffer settings
+#define HTTP_RECV_BUF_LEN 512
 
 // Globals
-static char response[512];
+static uint8_t recv_buf[HTTP_RECV_BUF_LEN];
+
+// HTTP request callback
+static void response_callback(struct http_response *resp,
+			                  enum http_final_call final_data,
+			                  void *user_data)
+{
+    char temp_buf[HTTP_RECV_BUF_LEN + 1];
+
+    // Check if we still have more data to receive
+	if (final_data == HTTP_DATA_MORE) {
+		printk("Partial data received (%d bytes)\r\n", resp->data_len);
+	} else if (final_data == HTTP_DATA_FINAL) {
+		printk("All data received (%d bytes)\r\n", resp->data_len);
+	}
+
+    // Print the received data (up to data_len bytes)
+    memcpy(temp_buf, resp->recv_buf, resp->data_len);
+    temp_buf[resp->data_len] = '\0';
+    printk("Received data:\r\n%s\r\n", temp_buf);
+}
+
 
 // Print the results of a DNS lookup
 void print_addrinfo(struct zsock_addrinfo **results)
@@ -49,13 +75,11 @@ int main(void)
 {
     struct zsock_addrinfo hints;
     struct zsock_addrinfo *res;
-    char http_request[512];
     int sock;
-    int len;
-    uint32_t rx_total;
     int ret;
+    struct http_request req;
 
-    printk("HTTP GET Demo\r\n");
+    printk("HTTP Client Subsystem Demo\r\n");
 
     // Initialize WiFi
     wifi_init();
@@ -69,11 +93,6 @@ int main(void)
 
     // Wait to receive an IP address (blocking)
     wifi_wait_for_ip_addr();
-    
-    // Construct HTTP GET request
-    snprintf(http_request, 
-             sizeof(http_request), 
-             "GET %s HTTP/1.1\r\nHost: %s\r\n\r\n", HTTP_URL, HTTP_HOST);
 
     // Clear and set address info
     memset(&hints, 0, sizeof(hints));
@@ -106,44 +125,30 @@ int main(void)
         return 0;
     }
 
-    // Send the request
-    printk("Sending HTTP request...\r\n");
-    ret = zsock_send(sock, http_request, strlen(http_request), 0);
+    // Configure request
+    memset(&req, 0, sizeof(req));
+    req.method = HTTP_GET;
+    req.url = HTTP_URL;
+    req.host = HTTP_HOST;
+    req.protocol = "HTTP/1.1";
+    req.response = response_callback;
+    req.recv_buf = recv_buf;
+    req.recv_buf_len = sizeof(recv_buf);
+
+    // Make request
+    ret = http_client_req(sock, &req, HTTP_TIMEOUT_MS, NULL);
     if (ret < 0) {
-        printk("Error (%d): could not send request\r\n", errno);
+        printk("Error (%d): HTTP request failed\r\n", ret);
         return 0;
     }
 
-    // Print the response
-    printk("Response:\r\n\r\n");
-    rx_total = 0;
-    while (1) {
-
-        // Receive data from the socket
-		len = zsock_recv(sock, response, sizeof(response) - 1, 0);
-
-        // Check for errors
-		if (len < 0) {
-			printk("Receive error (%d): %s\r\n", errno, strerror(errno));
-			return 0;
-		}
-
-        // Check for end of data
-		if (len == 0) {
-			break;
-		}
-
-        // Null-terminate the response string and print it
-		response[len] = '\0';
-		printf("%s", response);
-        rx_total += len;
-	}
-
-    // Print the total number of bytes received
-	printk("\r\nTotal bytes received: %u\r\n", rx_total);
-
     // Close the socket
     zsock_close(sock);
+
+    // Do nothing
+    while (1) {
+        k_sleep(K_FOREVER);
+    }
 
 	return 0;
 }
