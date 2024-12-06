@@ -46,7 +46,7 @@ static void wifi_event_handler(struct net_mgmt_event_callback *cb, uint32_t mgmt
 		// Print IP address
 		char ip_addr[NET_IPV4_ADDR_LEN];
 		if (net_addr_ntop(AF_INET, 
-						  &iface->config.ip.ipv4->unicast[0].ipv4, 
+						  &iface->config.ip.ipv4->unicast[0].ipv4.address.in_addr,
 						  ip_addr,
 				  		  sizeof(ip_addr)) == NULL) {
 			LOG_ERR("Error: Could not convert IP address to string\r\n");
