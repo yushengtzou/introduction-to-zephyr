@@ -119,7 +119,7 @@ void wifi_wait_for_ip_addr(void)
     // Get the IP address
     memset(ip_addr, 0, sizeof(ip_addr));
     if (net_addr_ntop(AF_INET, 
-                      &iface->config.ip.ipv4->unicast[0].ipv4,
+                      &iface->config.ip.ipv4->unicast[0].ipv4.address.in_addr,
                       ip_addr, 
                       sizeof(ip_addr)) == NULL)
     {
