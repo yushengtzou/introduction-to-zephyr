@@ -20,29 +20,29 @@ static char response[512];
 // Print the results of a DNS lookup
 void print_addrinfo(struct zsock_addrinfo **results)
 {
-	char ipv4[INET_ADDRSTRLEN];
-	char ipv6[INET6_ADDRSTRLEN];
-	struct sockaddr_in *sa;
-	struct sockaddr_in6 *sa6;
-	struct zsock_addrinfo *rp;
-	
+    char ipv4[INET_ADDRSTRLEN];
+    char ipv6[INET6_ADDRSTRLEN];
+    struct sockaddr_in *sa;
+    struct sockaddr_in6 *sa6;
+    struct zsock_addrinfo *rp;
+
     // Iterate through the results
-	for (rp = *results; rp != NULL; rp = rp->ai_next) {
+    for (rp = *results; rp != NULL; rp = rp->ai_next) {
 
-        // Print the IP address (IPv4)
-		if (rp->ai_addr->sa_family == AF_INET) {
-			sa = (struct sockaddr_in *) rp->ai_addr;
-			zsock_inet_ntop(AF_INET, &sa->sin_addr, ipv4, INET_ADDRSTRLEN);
-			printf("IPv4: %s\n", ipv4);
-		}
+        // Print IPv4 address
+        if (rp->ai_addr->sa_family == AF_INET) {
+            sa = (struct sockaddr_in *)rp->ai_addr;
+            zsock_inet_ntop(AF_INET, &sa->sin_addr, ipv4, INET_ADDRSTRLEN);
+            printk("IPv4: %s\r\n", ipv4);
+        }
 
-        // Print the IP address (IPv6)
-		if (rp->ai_addr->sa_family == AF_INET6) {
-			sa6 = (struct sockaddr_in6 *) rp->ai_addr;
-			zsock_inet_ntop(AF_INET6, &sa6->sin6_addr, ipv6, INET6_ADDRSTRLEN);
-			printf("IPv6: %s\n", ipv6);
-		}
-	}
+        // Print IPv6 address
+        if (rp->ai_addr->sa_family == AF_INET6) {
+            sa6 = (struct sockaddr_in6 *)rp->ai_addr;
+            zsock_inet_ntop(AF_INET6, &sa6->sin6_addr, ipv6, INET6_ADDRSTRLEN);
+            printk("IPv6: %s\r\n", ipv6);
+        }
+    }
 }
 
 int main(void)
@@ -69,22 +69,24 @@ int main(void)
 
     // Wait to receive an IP address (blocking)
     wifi_wait_for_ip_addr();
-    
+
     // Construct HTTP GET request
-    snprintf(http_request, 
-             sizeof(http_request), 
-             "GET %s HTTP/1.1\r\nHost: %s\r\n\r\n", HTTP_URL, HTTP_HOST);
+    snprintf(http_request,
+             sizeof(http_request),
+             "GET %s HTTP/1.1\r\nHost: %s\r\n\r\n",
+             HTTP_URL,
+             HTTP_HOST);
 
     // Clear and set address info
     memset(&hints, 0, sizeof(hints));
-    hints.ai_family = AF_INET;          // IPv4
-    hints.ai_socktype = SOCK_STREAM;    // TCP socket
+    hints.ai_family = AF_INET;              // IPv4
+    hints.ai_socktype = SOCK_STREAM;        // TCP socket
 
     // Perform DNS lookup
     printk("Performing DNS lookup...\r\n");
     ret = zsock_getaddrinfo(HTTP_HOST, "80", &hints, &res);
     if (ret != 0) {
-        printk("Error (%d): could not perform DNS lookup\r\n", ret);
+        printk("Error (%d): Could not perform DNS lookup\r\n", ret);
         return 0;
     }
 
@@ -94,23 +96,22 @@ int main(void)
     // Create a new socket
     sock = zsock_socket(res->ai_family, res->ai_socktype, res->ai_protocol);
     if (sock < 0) {
-        printk("Error (%d): could not create socket\r\n", errno);
+        printk("Error (%d): Could not create socket\r\n", errno);
         return 0;
     }
-    printk("Socket created. File descriptor: %d\r\n", sock);
 
     // Connect the socket
     ret = zsock_connect(sock, res->ai_addr, res->ai_addrlen);
     if (ret < 0) {
-        printk("Error (%d): could not connect the socket\r\n", errno);
+        printk("Error (%d): Could not connect the socket\r\n", errno);
         return 0;
     }
 
-    // Send the request
+    // Set the request
     printk("Sending HTTP request...\r\n");
     ret = zsock_send(sock, http_request, strlen(http_request), 0);
     if (ret < 0) {
-        printk("Error (%d): could not send request\r\n", errno);
+        printk("Error (%d): Could not send request\r\n", errno);
         return 0;
     }
 
@@ -120,30 +121,30 @@ int main(void)
     while (1) {
 
         // Receive data from the socket
-		len = zsock_recv(sock, response, sizeof(response) - 1, 0);
+        len = zsock_recv(sock, response, sizeof(response) - 1, 0);
 
         // Check for errors
-		if (len < 0) {
-			printk("Receive error (%d): %s\r\n", errno, strerror(errno));
-			return 0;
-		}
+        if (len < 0) {
+            printk("Receive error (%d): %s\r\n", errno, strerror(errno));
+            return 0;
+        }
 
         // Check for end of data
-		if (len == 0) {
-			break;
-		}
+        if (len == 0) {
+            break;
+        }
 
         // Null-terminate the response string and print it
-		response[len] = '\0';
-		printf("%s", response);
+        response[len] = '\0';
+        printk("%s", response);
         rx_total += len;
-	}
+    }
 
     // Print the total number of bytes received
-	printk("\r\nTotal bytes received: %u\r\n", rx_total);
+    printk("\r\nTotal bytes received: %u\r\n", rx_total);
 
     // Close the socket
     zsock_close(sock);
 
-	return 0;
+    return 0;
 }
