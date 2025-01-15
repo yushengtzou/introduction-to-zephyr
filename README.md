@@ -73,7 +73,7 @@ Alternatively, you can run the image in interactive mode by adding the `--entryp
 
 ### Connect to Container
 
-With the Docker image built, you have two options to connect to the development environment: browser or SSH.
+With the Docker image built, you have a few options to connect to the development environment: browser, Dev Containers, SSH. Choose one of the options below.
 
 #### Option 1: Connect via Browser
 
@@ -83,7 +83,17 @@ Open a browser and navigate to http://localhost:8800/.
 > * ***/workspace*** is the shared directory between your host and container.
 > * ***/opt/toolchains/zephyr*** is the Zephyr RTOS source code. It is for reference only and should not be modified!
 
-#### Option 2: SSH
+#### Option 2: VS Code Dev Containers
+
+Dev Containers is a wonderful extension for letting you connect your local VS Code to a Docker container. Feel free to read the [official documentation](https://code.visualstudio.com/docs/devcontainers/containers) to learn more.
+
+In your local VS Code, install the [Dev Containers](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers) extension.
+
+Open the command palette (Ctrl+Shift+P) and search for **Dev Containers: Attach to Running Container**. Click it, and you should see a container of your *env-zephyr-espressif* image running. Click the container from the list. A new VS Code window will open and install the required dependencies.
+
+Go to **File > Open Workspace from File..** and select the **/zephyr.code-workspace** file when prompted. Enter the password again if requested. This should configure your VS Code workspace with the */workspace* directory mapped from the host along with */opt/toolchains/zephyr* and */opt/toolchains/modules* so you can browse the Zephyr RTOS source files.
+
+#### Option 3: VS Code SSH
 
 If you want to develop Zephyr applications using your local instance of VS Code, you can connect to the running container using SSH. This will allow you to use your custom themes, extensions, settings, etc.
 
@@ -91,13 +101,16 @@ In your local VS Code, install the [Remote - SSH extension](https://marketplace.
 
 Open the extension in VS Code and create a new connection: **root@localhost:2222**.
 
-Connect and login using the password in the Dockerfile (default: `zephyr`). Go to **File > Open Workspace from File..** and select the **/zephyr.code-workspace** file when prompted. Enter the password again if requested. This should configure your VS Code workspace with the */workspace* directory mapped from the host and */opt/toolchains/zephyr* so you can browse the Zephyr RTOS source files.
+Connect and login using the password in the Dockerfile (default: `zephyr`). Go to **File > Open Workspace from File..** and select the **/zephyr.code-workspace** file when prompted. Enter the password again if requested. This should configure your VS Code workspace with the */workspace* directory mapped from the host along with */opt/toolchains/zephyr* and */opt/toolchains/modules* so you can browse the Zephyr RTOS source files.
 
-I recommend installing the following VS Code extensions to make working with Zephyr easier (e.g. IntelliSense):
+### Recommended Extensions
 
- * [C/C++](https://marketplace.visualstudio.com/items?itemName=ms-vscode.cpptools)
+I recommend installing the following VS Code extensions to make working with Zephyr easier (e.g. IntelliSense). Note that the *zephyr.code-worspace* file will automatically recommend them.
+
+ * [C/C++](https://marketplace.visualstudio.com/items?itemName=ms-vscode.cpptools)AZ
  * [CMake Tools](https://marketplace.visualstudio.com/items?itemName=ms-vscode.cmake-tools)
  * [nRF DeviceTree](https://marketplace.visualstudio.com/items?itemName=nordic-semiconductor.nrf-devicetree)
+ * [Microsoft Hex Editor](https://marketplace.visualstudio.com/items?itemName=ms-vscode.hexeditor)
 
 ### Build Demo Application
 
@@ -105,7 +118,7 @@ Open a terminal in the VS Code client and build the project. Note that I'm using
 
 ```
 cd apps/01_blink
-west build -p always -b esp32s3_devkitc/esp32s3/procpu
+west build -p always -b esp32s3_devkitc/esp32s3/procpu -- -DDTC_OVERLAY_FILE=boards/esp32s3_devkitc.overlay
 ```
 
 With some luck, the *blink* sample should build. The binary files will be in *workspace/apps/blink/build/zephyr*, which you can flash using [esptool](https://docs.espressif.com/projects/esptool/en/latest/esp32/).
