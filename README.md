@@ -53,6 +53,8 @@ From this directory, build the image (this will take some time):
 docker build -t env-zephyr-espressif -f Dockerfile.espressif .
 ```
 
+> **NOTE**: If you see an `Unsupported architecture` error, you may need to set the CPU architecture manually. Add `--build-arg TARGETARCH=amd64` (or `arm64`, depending on your CPU) to your `docker build` command.
+
 You can ignore the warning about setting the password as an `ARG` in the Dockerfile. The container is fairly unsecure anyway; I only recommend running it locally when you need it. You will need to change the password and configure *code-server* and *sshd* to be more secure if you want to use it remotely.
 
 Run the image in *VS Code Server* mode. Note that it mounts the local *workspace/* directory into the container! We also expose ports 3333 (OpenOCD), 2222 (mapped from 22 within the container for SSH), and 8800 (*code-server*).
