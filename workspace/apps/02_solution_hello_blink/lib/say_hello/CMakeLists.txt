@@ -7,3 +7,6 @@ target_include_directories(
     PUBLIC   
     ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
+
+# Required to set Zephyr compile options (e.g. for ARM)
+target_link_libraries(hello_lib PRIVATE zephyr_interface)

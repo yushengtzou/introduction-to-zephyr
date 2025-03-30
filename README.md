@@ -1,8 +1,14 @@
 # Introduction to Zephyr
 
-Welcome to the Introduction to Zephyr course! You will find all of the example projects and solution code for the example projects in this repository. Follow the [Development Environment](#development-environment) and [Getting Started](#getting-started) sections below to set up the Zephyr and ESP32 toolchain 
+Welcome to the Introduction to Zephyr course! You will find all of the example projects and solution code for the example projects in this repository. Follow the [Development Environment: Espressif](#development-environment-espressif) and [Getting Started](#getting-started) sections below to set up the Zephyr and ESP32 toolchain 
 
-## Development Environment
+The full Introduction to Zephyr video series can be found [here](https://www.youtube.com/watch?v=mTJ_vKlMS_4&list=PLEBQazB0HUyTmK2zdwhaf8bLwuEaDH-52&index=1):
+
+[![Introduction to Zephyr video series](https://img.youtube.com/vi/mTJ_vKlMS_4/0.jpg)](https://www.youtube.com/watch?v=mTJ_vKlMS_4&list=PLEBQazB0HUyTmK2zdwhaf8bLwuEaDH-52&index=1)
+
+> **Note**: The video series and development environment were built specifically around the ESP32. You are welcome to try a non-Espressif board, but I cannot promise it will work. Also, some features (e.g. WiFi) might not be available. There are notes after the *Getting Started* section on how to build Docker images for other targets.
+
+## Development Environment: Espressif
 
 This is a development environment for creating Docker images with the Zephyr toolchain used to build source code for the ESP32. You build the image for your desired toolchain, store projects in the *workspace/* directory, and then run the image whenever you want to build (e.g. `west build`) the project. The intention is to use this environment as your VS Code working directory, but it is usable outside of VS Code.
 
@@ -109,7 +115,7 @@ Connect and login using the password in the Dockerfile (default: `zephyr`). Go t
 
 I recommend installing the following VS Code extensions to make working with Zephyr easier (e.g. IntelliSense). Note that the *zephyr.code-worspace* file will automatically recommend them.
 
- * [C/C++](https://marketplace.visualstudio.com/items?itemName=ms-vscode.cpptools)AZ
+ * [C/C++](https://marketplace.visualstudio.com/items?itemName=ms-vscode.cpptools)
  * [CMake Tools](https://marketplace.visualstudio.com/items?itemName=ms-vscode.cmake-tools)
  * [nRF DeviceTree](https://marketplace.visualstudio.com/items?itemName=nordic-semiconductor.nrf-devicetree)
  * [Microsoft Hex Editor](https://marketplace.visualstudio.com/items?itemName=ms-vscode.hexeditor)
@@ -119,7 +125,7 @@ I recommend installing the following VS Code extensions to make working with Zep
 Open a terminal in the VS Code client and build the project. Note that I'm using the [ESP32-S3-DevKitC](https://docs.espressif.com/projects/esp-idf/en/stable/esp32s3/hw-reference/esp32s3/user-guide-devkitc-1.html) as my target board. Feel free to change it to one of the [other ESP32 dev boards](https://docs.zephyrproject.org/latest/boards/index.html#vendor=espressif).
 
 ```
-cd apps/01_blink
+cd apps/01_demo_blink
 west build -p always -b esp32s3_devkitc/esp32s3/procpu -- -DDTC_OVERLAY_FILE=boards/esp32s3_devkitc.overlay
 ```
 
@@ -146,6 +152,52 @@ python -m serial.tools.miniterm "<PORT>" 115200
 ```
 
 You should see the LED state printed to the console. Exit with *ctrl+]* (or *cmd+]* for macOS).
+
+## Development Environment: Raspberry Pi Pico
+
+> **IMPORTANT!** This is an experimental Docker image for building Zephyr applications for the Raspberry Pi RP2x line of processors (e.g. RP2040). I cannot promise all demo applications from the course will work.
+
+The Raspberry Pi Pico is capable of acting as a USB serial device (in CDC-ACM mode) for console interactivity. That means you will need to enable USB CDC-ACM mode in Kconfig and map the console to the USB device in the Devicetree. I have added example *rpi_pico.conf* and *rpi_pico.overlay* files in *workspace/apps/01_demo_blink/boards* that show how to do this. You will need to use the settings in these files to get the console (e.g. `printk()` and `printf()`) to work in other demos.
+
+Build the image:
+
+```sh
+docker build -t env-zephyr-rp2 -f Dockerfile.rp2 .
+```
+
+Run the image on Linux/macOS:
+
+```sh
+docker run --rm -it -p 3333:3333 -p 2222:22 -p 8800:8800 -v "$(pwd)"/workspace:/workspace -w /workspace env-zephyr-rp2
+```
+
+Run the image on Windows (PowerShell):
+
+```sh
+docker run --rm -it -p 3333:3333 -p 2222:22 -p 8800:8800 -v "${PWD}\workspace:/workspace" -w /workspace env-zephyr-rp2
+```
+
+Connect to the container by following one of the methods given in the Espressif version of [Connect to Container](#connect-to-container).
+
+Build demo application:
+
+```sh
+cd apps/01_demo_blink
+west build -p always -b rpi_pico -- -DDTC_OVERLAY_FILE=boards/rpi_pico.overlay -DEXTRA_CONF_FILE=boards/rpi_pico.conf
+```
+
+Hold the **BOOTSEL** button on the board and plug in the USB cable. From your host computer, copy *workspace/apps/01_demo_blink/build/zephyr/zephyr.uf2* to the UF2 drive.
+
+Activate the Python virtual environment (Linux/macOS: `source venv/bin/activate`, Windows: `venv\Scripts\activate`) if not done so already. Use miniterm (or your serial terminal of choice):
+
+```sh
+python -m serial.tools.miniterm "<PORT>" 115200
+```
+
+For more information about configuring the console over USB CDC ACM, see the following resources: 
+ * https://docs.zephyrproject.org/latest/connectivity/usb/device/usb_device.html
+ * https://docs.zephyrproject.org/latest/samples/subsys/usb/console/README.html
+
 
 ## License
 
