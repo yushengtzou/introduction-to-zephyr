@@ -55,7 +55,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 # Install base packages
 RUN apt-get -y update && \
-	apt-get install --no-install-recommends -y \
+    apt-get install --no-install-recommends -y \
         dos2unix \
         ca-certificates \
         file \
@@ -90,8 +90,8 @@ RUN python3 -m pip install --no-cache-dir west
 
 # Clean up stale packages
 RUN apt-get clean -y && \
-	apt-get autoremove --purge -y && \
-	rm -rf /var/lib/apt/lists/*
+    apt-get autoremove --purge -y && \
+    rm -rf /var/lib/apt/lists/*
 
 # Set up directories
 RUN mkdir -p /workspace/ && \
@@ -126,8 +126,8 @@ COPY scripts/espressif/west.yml /opt/toolchains/zephyr/west.yml
 
 # Instantiate west workspace and install tools
 RUN cd /opt/toolchains && \
-	west init -l zephyr && \
-	west update --narrow -o=--depth=1
+    west init -l zephyr && \
+    west update --narrow -o=--depth=1
 
 # Install module-specific blobs
 RUN cd /opt/toolchains && \
