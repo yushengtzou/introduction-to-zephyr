@@ -44,10 +44,10 @@ SHELL ["/bin/bash", "-c"]
 
 # Check if the target architecture is either x86_64 (amd64) or arm64 (aarch64)
 RUN if [ "$TARGETARCH" = "amd64" ] || [ "$TARGETARCH" = "arm64" ]; then \
-    echo "Architecture $TARGETARCH is supported."; \
+        echo "Architecture $TARGETARCH is supported."; \
     else \
-    echo "Unsupported architecture: $TARGETARCH"; \
-    exit 1; \
+        echo "Unsupported architecture: $TARGETARCH"; \
+        exit 1; \
     fi
 
 # Set non-interactive frontend for apt-get to skip any user confirmations
@@ -56,26 +56,26 @@ ENV DEBIAN_FRONTEND=noninteractive
 # Install base packages
 RUN apt-get -y update && \
     apt-get install --no-install-recommends -y \
-    dos2unix \
-    ca-certificates \
-    file \
-    locales \
-    git \
-    build-essential \
-    cmake \
-    ninja-build gperf \
-    device-tree-compiler \
-    wget \
-    curl \
-    python3 \
-    python3-pip \
-    python3-venv \
-    xz-utils \
-    dos2unix \
-    vim \
-    nano \
-    mc \
-    openssh-server
+        dos2unix \
+        ca-certificates \
+        file \
+        locales \
+        git \
+        build-essential \
+        cmake \
+        ninja-build gperf \
+        device-tree-compiler \
+        wget \
+        curl \
+        python3 \
+        python3-pip \
+        python3-venv \
+        xz-utils \
+        dos2unix \
+        vim \
+        nano \
+        mc \
+        openssh-server
 
 # Set root password
 RUN echo "root:${PASSWORD}" | chpasswd
@@ -155,6 +155,51 @@ RUN cd /opt/toolchains/zephyr-sdk-${ZEPHYR_SDK_VERSION} && \
     tar xf hosttools_linux-${HOSTTYPE}.tar.xz && \
     rm hosttools_linux-${HOSTTYPE}.tar.xz && \
     bash zephyr-sdk-${HOSTTYPE}-hosttools-standalone-*.sh -y -d .
+
+#-------------------------------------------------------------------------------
+# VS Code Server
+
+# Set VS Code Server environment variables
+ENV VS_CODE_SERVER_VERSION=${VS_CODE_SERVER_VERSION}
+ENV VS_CODE_SERVER_PORT=${VS_CODE_SERVER_PORT}
+
+# Install VS Code Server
+RUN cd /tmp && \
+    wget ${WGET_ARGS} https://code-server.dev/install.sh && \
+    chmod +x install.sh && \
+    bash install.sh --version ${VS_CODE_SERVER_VERSION}
+
+# Download VS Code extensions (code-server extension manager does not work well)
+RUN cd /tmp && \
+    if [ "$TARGETARCH" = "amd64" ]; then \
+        wget ${WGET_ARGS} https://github.com/microsoft/vscode-cpptools/releases/download/v${VS_CODE_EXT_CPPTOOLS_VERSION}/cpptools-linux-x64.vsix -O cpptools.vsix; \
+    elif [ "$TARGETARCH" = "arm64" ]; then \
+        wget ${WGET_ARGS} https://github.com/microsoft/vscode-cpptools/releases/download/v${VS_CODE_EXT_CPPTOOLS_VERSION}/cpptools-linux-arm64.vsix -O cpptools.vsix; \
+    else \
+        echo "Unsupported architecture"; \
+        exit 1; \
+    fi && \
+    wget ${WGET_ARGS} https://github.com/microsoft/vscode-cmake-tools/releases/download/v${VS_CODE_EXT_CMAKETOOLS_VERSION}/cmake-tools.vsix -O cmake-tools.vsix && \
+    wget --compression=gzip ${WGET_ARGS} https://marketplace.visualstudio.com/_apis/public/gallery/publishers/ms-vscode/vsextensions/hexeditor/${VS_CODE_EXT_HEX_EDITOR_VERSION}/vspackage -O hexeditor.vsix && \
+    wget --compression=gzip https://marketplace.visualstudio.com/_apis/public/gallery/publishers/nordic-semiconductor/vsextensions/nrf-devicetree/${VS_CODE_EXT_NRF_DEVICETREE_VERSION}/vspackage -O nordic-semiconductor.nrf-devicetree.vsix
+
+# Install extensions
+RUN cd /tmp && \
+    code-server --install-extension cpptools.vsix && \
+    code-server --install-extension cmake-tools.vsix && \
+    code-server --install-extension hexeditor.vsix && \
+    code-server --install-extension nordic-semiconductor.nrf-devicetree.vsix
+
+# Clean up
+RUN cd /tmp && \
+    rm install.sh && \
+    rm cpptools.vsix && \
+    rm cmake-tools.vsix && \
+    rm hexeditor.vsix && \
+    rm nordic-semiconductor.nrf-devicetree.vsix
+
+# Copy workspace configuration
+COPY scripts/zephyr.code-workspace /zephyr.code-workspace
 
 #-------------------------------------------------------------------------------
 # Optional Settings
