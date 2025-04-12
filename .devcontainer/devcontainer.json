@@ -17,10 +17,11 @@
   "forwardPorts": [],
   "workspaceMount": "source=${localWorkspaceFolder}/workspace,target=/workspace,type=bind,consistency=cached",
   "workspaceFolder": "/workspace",
-  // "postStartCommand": "code /esp-idf.code-workspace",
+  // "postStartCommand": "code --file-uri /zephyr.code-workspace", // Does not work
   "runArgs": [
     "--name",
     "Zephyr-Introduction",
+    "--rm",
     "-it",
     "-p",
     "2222:22",
