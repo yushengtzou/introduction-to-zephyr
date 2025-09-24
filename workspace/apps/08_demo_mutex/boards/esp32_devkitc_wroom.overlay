@@ -1,0 +1,39 @@
+/ {
+    aliases {
+        my-led = &led0;
+    };
+
+    leds {
+        compatible = "gpio-leds";
+        led0: led_12 {
+            gpios = <&gpio0 12 GPIO_ACTIVE_HIGH>;
+        };
+        led1: led_14 {
+            gpios = <&gpio0 14 GPIO_ACTIVE_HIGH>;
+        };
+        led2: led_27_a {
+            gpios = <&gpio0 27 GPIO_ACTIVE_HIGH>;
+        };
+        led3: led_27_b {
+            gpios = <&gpio0 27 GPIO_ACTIVE_HIGH>; // same pin shared intentionally?
+        };
+        led4: led_26_a {
+            gpios = <&gpio0 26 GPIO_ACTIVE_HIGH>;
+        };
+        led5: led_26_b {
+            gpios = <&gpio0 26 GPIO_ACTIVE_HIGH>; // duplicate pin, but label unique
+        };
+        led6: led_21 {
+            gpios = <&gpio0 21 GPIO_ACTIVE_HIGH>;
+        }; 
+        led7: led_22 {
+            gpios = <&gpio0 22 GPIO_ACTIVE_HIGH>;
+        };
+        led8: led_23 {
+            gpios = <&gpio0 23 GPIO_ACTIVE_HIGH>;
+        };
+        // Note: GPIO34-39 are input-only on ESP32; avoid for LEDs
+        // led9 would be invalid if using 35. Commenting out.
+        // led9: led_35 { gpios = <&gpio0 35 GPIO_ACTIVE_HIGH>; };
+        };     
+};

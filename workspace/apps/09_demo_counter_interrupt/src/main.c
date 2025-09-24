@@ -13,7 +13,8 @@ void counter_isr(const struct device *dev,
                 void *user_data)
 {
     // We pass in the alarm_cfg as our user_data, so cast it back
-    struct counter_alarm_cfg *alarm_cfg = user_data;
+    struct counter_alarm_cfg *alarm_cfg;
+    alarm_cfg = user_data;
 
     // Reset alarm (no need to stop or reset the counter)
     alarm_cfg->ticks = counter_us_to_ticks(dev, COUNTER_DELAY_US);

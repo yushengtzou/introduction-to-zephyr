@@ -3,8 +3,8 @@
 #include <zephyr/drivers/gpio.h>
 
 // Sleep settings
-static const int32_t blink_sleep_ms = 500;
-static const int32_t print_sleep_ms = 700;
+static const int32_t blink_sleep_ms = 1000;
+static const int32_t print_sleep_ms = 500;
 
 // Stack size settings
 #define BLINK_THREAD_STACK_SIZE 256
@@ -19,7 +19,7 @@ static struct k_thread blink_thread;
 const struct gpio_dt_spec led = GPIO_DT_SPEC_GET(DT_ALIAS(my_led), gpios);
 
 // Blink thread entry point
-void blink_thread_start(void *arg_1, void *arg_2, void *arg_3)
+void blink_thread_start(void *argv_1, void *argv_2, void *argv_3)
 {
     int ret;
     int state = 0;

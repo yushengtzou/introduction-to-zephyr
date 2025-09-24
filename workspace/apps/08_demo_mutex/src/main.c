@@ -16,8 +16,8 @@ K_THREAD_STACK_DEFINE(blink_stack, BLINK_THREAD_STACK_SIZE);
 K_THREAD_STACK_DEFINE(input_stack, INPUT_THREAD_STACK_SIZE);
 
 // Declare thread data structs
-static struct k_thread blink_thread;
-static struct k_thread input_thread;
+static struct k_thread blink_thread; // Thread Control Block
+static struct k_thread input_thread; // Thread Control Block
 
 // Define mutex
 K_MUTEX_DEFINE(my_mutex);
@@ -26,7 +26,19 @@ K_MUTEX_DEFINE(my_mutex);
 static int32_t blink_sleep_ms = 500;
 
 // Get LED struct from Devicetree
-const struct gpio_dt_spec led = GPIO_DT_SPEC_GET(DT_ALIAS(my_led), gpios);
+// const struct gpio_dt_spec led = GPIO_DT_SPEC_GET(DT_ALIAS(my_led), gpios);
+static const struct gpio_dt_spec leds[] = {
+    GPIO_DT_SPEC_GET(DT_NODELABEL(led0), gpios),
+    GPIO_DT_SPEC_GET(DT_NODELABEL(led1), gpios),
+    GPIO_DT_SPEC_GET(DT_NODELABEL(led2), gpios),
+    GPIO_DT_SPEC_GET(DT_NODELABEL(led3), gpios),
+    GPIO_DT_SPEC_GET(DT_NODELABEL(led4), gpios),
+    GPIO_DT_SPEC_GET(DT_NODELABEL(led5), gpios),
+    GPIO_DT_SPEC_GET(DT_NODELABEL(led6), gpios),
+    GPIO_DT_SPEC_GET(DT_NODELABEL(led7), gpios),
+    GPIO_DT_SPEC_GET(DT_NODELABEL(led8), gpios),
+};
+
 
 // Console input thread entry point
 void input_thread_start(void *arg_1, void *arg_2, void *arg_3)
@@ -63,14 +75,14 @@ void input_thread_start(void *arg_1, void *arg_2, void *arg_3)
 
         // Print the new sleep time
         printk("Updating blink sleep to: %d\r\n", blink_sleep_ms);
+
+        printk("From input thread: blink_sleep_ms @ %p\n", (void *)&blink_sleep_ms);
     }
 }
 
 // Blink thread entry point
 void blink_thread_start(void *arg_1, void *arg_2, void *arg_3)
 {
-    int ret;
-    int state = 0;
     int32_t sleep_ms;
 
     printk("Starting blink thread\r\n");
@@ -82,36 +94,41 @@ void blink_thread_start(void *arg_1, void *arg_2, void *arg_3)
         sleep_ms = blink_sleep_ms;
         k_mutex_unlock(&my_mutex);
 
-        // Change the state of the pin
-        state = !state;
+        for (size_t i = 0; i < ARRAY_SIZE(leds); i++) {
+            for (size_t j = 0; j < ARRAY_SIZE(leds); j++) {
+                gpio_pin_set_dt(&leds[j], 0);
+            }
 
-        // Set pin state
-        ret = gpio_pin_set_dt(&led, state);
-        if (ret < 0) {
-            printk("Error: could not toggle pin\r\n");
+            int ret_set = gpio_pin_set_dt(&leds[i], 1);
+            if (ret_set < 0) {
+                printk("Error: could not toggle LED %d\r\n", (int)i);
+            }
+            k_msleep(sleep_ms);
         }
 
-        k_msleep(sleep_ms);
+        printk("From blink thread: blink_sleep_ms @ %p\n", (void *)&blink_sleep_ms);  
     }
+    
 }
+
 
 int main(void)
 {
-    int ret;
     k_tid_t input_tid;
     k_tid_t blink_tid;
+    int ret;
 
-    // Make sure that the GPIO was initialized
-    if (!gpio_is_ready_dt(&led)) {
-        printk("Error: GPIO pin not ready\r\n");
-        return 0;
-    }
-
-    // Set the GPIO as output
-    ret = gpio_pin_configure_dt(&led, GPIO_OUTPUT);
-    if (ret < 0) {
-        printk("Error: Could not configure GPIO\r\n");
-        return 0;
+    for (size_t i = 0; i < ARRAY_SIZE(leds); i++) {
+        if (!gpio_is_ready_dt(&leds[i])) {
+            printk("LED %d not ready\n", (int)i);
+            return 0;
+        }
+        // Set the GPIO as output
+        ret = gpio_pin_configure_dt(&leds[i], GPIO_OUTPUT);
+        if (ret < 0) {
+            printk("Error: Could not configure GPIO\r\n");
+            return 0;
+        }
     }
 
     // Initialize the console
